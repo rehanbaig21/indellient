@@ -1,0 +1,20 @@
+#!/bin/bash
+
+
+file_to_wait=$2
+directory=$(dirname ${file_to_wait})
+filename=$(basename ${file_to_wait})
+ 
+while read f
+do
+  aws s3 ls s3://$1 --recursive | awk '{print $4}' | grep $filename
+  if [ $filename != $(aws s3 ls s3://$1 --recursive | awk '{print $4}' | grep $filename ) ]
+  then
+    echo "file not exsits in s3, uploading to s3 bucket $1"
+    aws s3 cp $2 s3://$1
+  else 
+    echo "File modified, uploading modified version of file to s3 $1"
+    aws s3 cp $2 s3://$1
+  fi
+done < < (inotifywait –m -q -e create -e modify –-format %f $directory)
+
